@@ -11,6 +11,20 @@ permissions:
 jobs:
   tests:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: corvees_test
+          POSTGRES_USER: corvees
+          POSTGRES_PASSWORD: local-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U corvees -d corvees_test"
+          --health-interval 2s --health-timeout 2s --health-retries 15
+    env:
+      CORVEES_TEST_DATABASE_URL: Host=localhost;Port=5432;Database=corvees_test;Username=corvees;Password=local-only
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4

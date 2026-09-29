@@ -60,22 +60,23 @@ Rien n’est encore figé : modèle de données, stockage, interface et choix de
 
 ## Développement local
 
-Prérequis : SDK .NET 10, OpenSSL et Docker Compose (ou Podman avec une machine démarrée). Le [squelette de l'ADR 0001](docs/adr/0001-stack-backend-mcp.md) utilise ASP.NET Core, le SDK MCP C# et PostgreSQL. Aucun outil métier ni table n'est encore défini : leurs schémas relèvent de [l'issue #2](https://github.com/petits-chapeaux/corvees/issues/2). Les autres couches seront créées lorsqu'elles auront du code à héberger.
+Prérequis : SDK .NET 10, OpenSSL, `psql` et Docker Compose (ou Podman avec une machine démarrée). L'[ADR 0001](docs/adr/0001-stack-backend-mcp.md) choisit la stack; l'[ADR 0002](docs/adr/0002-project-tools-and-schemas.md) définit les groupes, projets, étapes, lieux, dépendances et contrats MCP/REST.
 
 ```sh
 ./scripts/dev.sh
 ```
 
-Le script démarre Postgres, génère un jeton pour cette exécution et affiche l'URL MCP locale. On peut fixer `CapabilityToken` ou `ConnectionStrings__Corvees` dans l'environnement pour les remplacer. Le serveur écoute sur `http://localhost:5169`. Vérifier `curl http://localhost:5169/healthz` (processus), `curl http://localhost:5169/readyz` (Postgres) et `curl http://localhost:5169/api/v1` (entrée REST versionnée). Cette entrée REST ne contient que des métadonnées publiques : aucune ressource métier ni authentification REST n'est encore définie. Les futurs endpoints utiliseront les mêmes services applicatifs que MCP. Pour tester la négociation MCP, utiliser le jeton affiché (le script ne peut pas exporter ses variables vers le shell parent) :
+Le script démarre Postgres, restaure l'outil EF, applique les migrations et crée un groupe et un premier membre de développement; il affiche leur jeton **une seule fois** et l'URL MCP. Chaque exécution crée un nouveau groupe local. Le serveur écoute sur `http://localhost:5169`. Vérifier `/healthz`, `/readyz` et la racine publique `/api/v1`. Les autres routes REST demandent `Authorization: Bearer <jeton>`.
 
 ```sh
-export CapabilityToken='<jeton affiché par le script>'
-curl -sS -X POST "http://localhost:5169/g/$CapabilityToken/mcp" \
+export MEMBER_TOKEN='<jeton affiché par le script>'
+curl -H "Authorization: Bearer $MEMBER_TOKEN" http://localhost:5169/api/v1/projects
+curl -sS -X POST "http://localhost:5169/m/$MEMBER_TOKEN/mcp" \
   -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"curl","version":"1.0"}}}'
 ```
 
-`dotnet test Corvees.slnx` exécute les tests sans conteneur. `docker compose down` arrête la base et `docker compose down -v` efface ses données locales. Le mot de passe de Compose et le HTTP en clair sont réservés au loopback; ne pas les utiliser en production. En déploiement, fournir un jeton secret, une chaîne de connexion et `AllowedHosts` avec le nom d'hôte public exact. Ne jamais journaliser ni partager l'URL de capacité. Les migrations EF, la gestion des groupes et le déploiement restent à implémenter.
+Pour provisionner en production, utiliser `scripts/admin.sh create-group NOM PREMIER_MEMBRE`, `add-member GROUPE_UUID NOM`, `rotate-token MEMBRE_UUID`, `delete-member MEMBRE_UUID` et `restore-member MEMBRE_UUID` avec les variables PostgreSQL d'un opérateur. Aucune route d'administration n'est publique. `dotnet test Corvees.slnx` exécute les tests sans base par défaut; définir `CORVEES_TEST_DATABASE_URL` pour les tests d'intégration PostgreSQL. `docker compose down -v` efface les données locales. Le mot de passe et le HTTP en clair sont réservés au loopback. En production, configurer `ConnectionStrings__Corvees`, `AllowedHosts`, TLS et le masquage des URL MCP; jamais journaliser ou partager les jetons.
 
 ## Prochaines étapes
 

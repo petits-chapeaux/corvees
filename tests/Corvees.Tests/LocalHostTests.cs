@@ -1,81 +1,52 @@
 using System.Net;
 using System.Net.Http.Json;
+using Corvees.Host;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 
 public sealed class LocalHostTests : IClassFixture<LocalHostFactory>
 {
-    private const string Token = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
     private readonly HttpClient _client;
-
     public LocalHostTests(LocalHostFactory factory) => _client = factory.CreateClient();
 
     [Fact]
-    public async Task HealthDoesNotDependOnDatabase()
-    {
-        var response = await _client.GetAsync("/healthz");
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
+    public async Task HealthDoesNotDependOnDatabase() =>
+        Assert.Equal(HttpStatusCode.OK, (await _client.GetAsync("/healthz")).StatusCode);
 
     [Fact]
-    public async Task ReadinessFailsWhenDatabaseIsUnavailable()
-    {
-        var response = await _client.GetAsync("/readyz");
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
-    }
+    public async Task ReadinessFailsWhenDatabaseIsUnavailable() =>
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, (await _client.GetAsync("/readyz")).StatusCode);
 
     [Fact]
-    public async Task RestApiIsVersionedAndDoesNotDependOnDatabase()
+    public async Task MetadataRemainsPublic()
     {
         var response = await _client.GetAsync("/api/v1");
-
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var info = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
-        Assert.Equal("corvees", info?["name"]);
         Assert.Equal("v1", info?["version"]);
     }
 
     [Fact]
-    public async Task McpRequiresCapabilityToken()
+    public async Task RestRequiresMemberToken() =>
+        Assert.Equal(HttpStatusCode.Unauthorized, (await _client.GetAsync("/api/v1/projects")).StatusCode);
+
+    [Fact]
+    public async Task McpRejectsMalformedTokenWithoutDatabase()
     {
-        var response = await _client.PostAsJsonAsync("/g/invalid/mcp", new { jsonrpc = "2.0", method = "initialize", id = 1 });
+        var response = await _client.PostAsJsonAsync("/m/invalid/mcp", new { jsonrpc = "2.0", method = "initialize", id = 1 });
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
-    public async Task McpListsNoBusinessTools()
+    public void EveryPublicToolHasInputAndOutputSchema()
     {
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"/g/{Token}/mcp")
+        Assert.Equal(30, ToolCatalog.Tools.Count);
+        Assert.All(ToolCatalog.Tools, tool =>
         {
-            Content = JsonContent.Create(new { jsonrpc = "2.0", id = 2, method = "tools/list" })
-        };
-        request.Headers.Accept.ParseAdd("application/json, text/event-stream");
-        request.Headers.TryAddWithoutValidation("MCP-Protocol-Version", "2025-11-25");
-
-        var response = await _client.SendAsync(request);
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("\"tools\":[]", await response.Content.ReadAsStringAsync());
-    }
-
-    [Fact]
-    public async Task McpInitializesWithoutBusinessTools()
-    {
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"/g/{Token}/mcp")
-        {
-            Content = JsonContent.Create(new
-            {
-                jsonrpc = "2.0",
-                id = 1,
-                method = "initialize",
-                @params = new { protocolVersion = "2025-11-25", capabilities = new { }, clientInfo = new { name = "test", version = "1.0" } }
-            })
-        };
-        request.Headers.Accept.ParseAdd("application/json, text/event-stream");
-
-        var response = await _client.SendAsync(request);
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("serverInfo", await response.Content.ReadAsStringAsync());
+            Assert.Equal("object", tool.InputSchema.GetProperty("type").GetString());
+            Assert.Equal("object", tool.OutputSchema?.GetProperty("type").GetString());
+        });
     }
 }
 
@@ -86,7 +57,6 @@ public sealed class LocalHostFactory : WebApplicationFactory<Program>
         builder.UseEnvironment("Development");
         builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["CapabilityToken"] = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
             ["ConnectionStrings:Corvees"] = "Host=127.0.0.1;Port=1;Database=corvees;Username=corvees;Password=local-only;Timeout=1"
         }));
     }
