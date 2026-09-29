@@ -60,18 +60,16 @@ Rien n’est encore figé : modèle de données, stockage, interface et choix de
 
 ## Développement local
 
-Prérequis : SDK .NET 10 et Docker Compose (ou Podman avec une machine démarrée). Le [squelette de l'ADR 0001](docs/adr/0001-stack-backend-mcp.md) utilise ASP.NET Core, le SDK MCP C# et PostgreSQL. Aucun outil métier ni table n'est encore défini : leurs schémas relèvent de [l'issue #2](https://github.com/petits-chapeaux/corvees/issues/2). Les autres couches seront créées lorsqu'elles auront du code à héberger.
+Prérequis : SDK .NET 10, OpenSSL et Docker Compose (ou Podman avec une machine démarrée). Le [squelette de l'ADR 0001](docs/adr/0001-stack-backend-mcp.md) utilise ASP.NET Core, le SDK MCP C# et PostgreSQL. Aucun outil métier ni table n'est encore défini : leurs schémas relèvent de [l'issue #2](https://github.com/petits-chapeaux/corvees/issues/2). Les autres couches seront créées lorsqu'elles auront du code à héberger.
 
 ```sh
-docker compose up -d --wait
-export CapabilityToken="$(openssl rand -hex 32)"
-export ConnectionStrings__Corvees='Host=127.0.0.1;Port=54329;Database=corvees;Username=corvees;Password=local-only'
-dotnet run --project src/Corvees.Host --launch-profile http
+./scripts/dev.sh
 ```
 
-Le serveur écoute sur `http://localhost:5169`. Vérifier `curl http://localhost:5169/healthz` (processus) et `curl http://localhost:5169/readyz` (Postgres). Le point MCP est `http://localhost:5169/g/$CapabilityToken/mcp`. Pour tester la négociation :
+Le script démarre Postgres, génère un jeton pour cette exécution et affiche l'URL MCP locale. On peut fixer `CapabilityToken` ou `ConnectionStrings__Corvees` dans l'environnement pour les remplacer. Le serveur écoute sur `http://localhost:5169`. Vérifier `curl http://localhost:5169/healthz` (processus) et `curl http://localhost:5169/readyz` (Postgres). Pour tester la négociation, utiliser le jeton affiché (le script ne peut pas exporter ses variables vers le shell parent) :
 
 ```sh
+export CapabilityToken='<jeton affiché par le script>'
 curl -sS -X POST "http://localhost:5169/g/$CapabilityToken/mcp" \
   -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"curl","version":"1.0"}}}'
