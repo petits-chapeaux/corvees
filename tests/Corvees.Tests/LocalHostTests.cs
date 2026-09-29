@@ -26,6 +26,17 @@ public sealed class LocalHostTests : IClassFixture<LocalHostFactory>
     }
 
     [Fact]
+    public async Task RestApiIsVersionedAndDoesNotDependOnDatabase()
+    {
+        var response = await _client.GetAsync("/api/v1");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var info = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+        Assert.Equal("corvees", info?["name"]);
+        Assert.Equal("v1", info?["version"]);
+    }
+
+    [Fact]
     public async Task McpRequiresCapabilityToken()
     {
         var response = await _client.PostAsJsonAsync("/g/invalid/mcp", new { jsonrpc = "2.0", method = "initialize", id = 1 });
