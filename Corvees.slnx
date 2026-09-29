@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Corvees.Host/Corvees.Host.csproj" />
+    <Project Path="src/Corvees.Infrastructure/Corvees.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Corvees.Tests/Corvees.Tests.csproj" />
+  </Folder>
+</Solution>
