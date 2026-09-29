@@ -29,12 +29,15 @@ Le système mettrait alors le projet à jour et proposerait une suite concrète.
 - **Le collectif avant la productivité.** L’outil doit faciliter les moments partagés, pas transformer les corvées en gestion de performance.
 - **Assez de structure, pas trop.** Garder une trace utile sans imposer une bureaucratie.
 - **Souple par défaut.** Une liste priorisée peut être plus juste qu’un échéancier rigide.
+- **Centré sur la progression.** L’outil doit encourager le groupe en soulignant les avancées, sans masquer les suivis urgents.
 - **La conversation comme interface.** Les données restent structurées, mais on peut interagir avec elles naturellement.
 - **Pas de comptabilité morale.** Le temps et les contributions peuvent être visibles sans devenir un système de dette entre membres.
 
 ## Piste technique
 
 Le backend serait conçu **MCP-first**. Chaque capacité — projets, séances, décisions, tâches, outils et inventaire — serait exposée comme une ressource ou un outil MCP. Cela permettrait d’expérimenter avec différents clients et agents, tout en explorant cette architecture sur un projet concret.
+
+La documentation du projet serait en français. Le code serait en anglais et le produit serait conçu pour être internationalisé.
 
 Rien n’est encore figé : modèle de données, stockage, interface et choix de frameworks restent à discuter.
 
@@ -46,17 +49,19 @@ Rien n’est encore figé : modèle de données, stockage, interface et choix de
 4. Afficher les projets et leurs prochaines actions prioritaires.
 5. Enregistrer le compte rendu d’une séance et ajuster la suite.
 6. Maintenir un inventaire partagé des outils disponibles ou recherchés.
+7. Regrouper les disponibilités et planifier une séance de travail.
 
 ## Questions ouvertes
 
 - Quel niveau de suivi rend service sans devenir lourd?
 - Quelle serait la plus petite expérience utile à construire en premier?
-- Quels frameworks voudrions-nous essayer?
+- Kotlin et son SDK MCP conviendraient-ils au backend?
+- L’interface initiale devrait-elle être un chatbot IA existant connecté par MCP plutôt qu’un frontend dédié?
 
 ## Prochaines étapes
 
-- Créer des ADR pour choisir les frameworks :
-  - LLM;
-  - backend;
-  - frontend.
+- Créer des ADR pour choisir :
+  - l’intégration LLM et MCP;
+  - le backend, le stockage et l’infrastructure;
+  - les interfaces clientes, dont un chatbot IA connecté par MCP ou un frontend dédié.
 - Créer la structure du repo.
