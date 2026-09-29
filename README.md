@@ -55,7 +55,7 @@ Rien n’est encore figé : modèle de données, stockage, interface et choix de
 
 - Quel niveau de suivi rend service sans devenir lourd?
 - Quelle serait la plus petite expérience utile à construire en premier?
-- Kotlin et son SDK MCP conviendraient-ils au backend?
+- Kotlin, son SDK MCP et une approche fonctionnelle conviendraient-ils au backend?
 - L’interface initiale devrait-elle être un chatbot IA existant connecté par MCP plutôt qu’un frontend dédié?
 
 ## Prochaines étapes
