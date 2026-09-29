@@ -58,6 +58,27 @@ Rien n’est encore figé : modèle de données, stockage, interface et choix de
 - Kotlin, son SDK MCP et une approche fonctionnelle conviendraient-ils au backend?
 - L’interface initiale devrait-elle être un chatbot IA existant connecté par MCP plutôt qu’un frontend dédié?
 
+## Développement local
+
+Prérequis : SDK .NET 10 et Docker Compose (ou Podman avec une machine démarrée). Le [squelette de l'ADR 0001](docs/adr/0001-stack-backend-mcp.md) utilise ASP.NET Core, le SDK MCP C# et PostgreSQL. Aucun outil métier ni table n'est encore défini : leurs schémas relèvent de [l'issue #2](https://github.com/petits-chapeaux/corvees/issues/2). Les autres couches seront créées lorsqu'elles auront du code à héberger.
+
+```sh
+docker compose up -d --wait
+export CapabilityToken="$(openssl rand -hex 32)"
+export ConnectionStrings__Corvees='Host=127.0.0.1;Port=54329;Database=corvees;Username=corvees;Password=local-only'
+dotnet run --project src/Corvees.Host --launch-profile http
+```
+
+Le serveur écoute sur `http://localhost:5169`. Vérifier `curl http://localhost:5169/healthz` (processus) et `curl http://localhost:5169/readyz` (Postgres). Le point MCP est `http://localhost:5169/g/$CapabilityToken/mcp`. Pour tester la négociation :
+
+```sh
+curl -sS -X POST "http://localhost:5169/g/$CapabilityToken/mcp" \
+  -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"curl","version":"1.0"}}}'
+```
+
+`dotnet test Corvees.slnx` exécute les tests sans conteneur. `docker compose down` arrête la base et `docker compose down -v` efface ses données locales. Le mot de passe de Compose et le HTTP en clair sont réservés au loopback; ne pas les utiliser en production. En déploiement, fournir un jeton secret, une chaîne de connexion et `AllowedHosts` avec le nom d'hôte public exact. Ne jamais journaliser ni partager l'URL de capacité. Les migrations EF, la gestion des groupes et le déploiement restent à implémenter.
+
 ## Prochaines étapes
 
 - Créer des ADR pour choisir :
