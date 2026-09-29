@@ -66,7 +66,7 @@ Prérequis : SDK .NET 10, OpenSSL et Docker Compose (ou Podman avec une machine 
 ./scripts/dev.sh
 ```
 
-Le script démarre Postgres, génère un jeton pour cette exécution et affiche l'URL MCP locale. On peut fixer `CapabilityToken` ou `ConnectionStrings__Corvees` dans l'environnement pour les remplacer. Le serveur écoute sur `http://localhost:5169`. Vérifier `curl http://localhost:5169/healthz` (processus) et `curl http://localhost:5169/readyz` (Postgres). Pour tester la négociation, utiliser le jeton affiché (le script ne peut pas exporter ses variables vers le shell parent) :
+Le script démarre Postgres, génère un jeton pour cette exécution et affiche l'URL MCP locale. On peut fixer `CapabilityToken` ou `ConnectionStrings__Corvees` dans l'environnement pour les remplacer. Le serveur écoute sur `http://localhost:5169`. Vérifier `curl http://localhost:5169/healthz` (processus), `curl http://localhost:5169/readyz` (Postgres) et `curl http://localhost:5169/api/v1` (entrée REST versionnée). Cette entrée REST ne contient que des métadonnées publiques : aucune ressource métier ni authentification REST n'est encore définie. Les futurs endpoints utiliseront les mêmes services applicatifs que MCP. Pour tester la négociation MCP, utiliser le jeton affiché (le script ne peut pas exporter ses variables vers le shell parent) :
 
 ```sh
 export CapabilityToken='<jeton affiché par le script>'

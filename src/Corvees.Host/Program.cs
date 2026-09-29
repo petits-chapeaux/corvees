@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using Corvees.Host;
 using Corvees.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using ModelContextProtocol.AspNetCore;
@@ -48,6 +49,7 @@ app.Use(async (context, next) =>
     await next(context);
 });
 
+app.MapApi();
 app.MapMcp("/g/{token}/mcp");
 app.Run();
 
