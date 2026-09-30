@@ -96,7 +96,7 @@ public sealed class CorveesDbContext(DbContextOptions<CorveesDbContext> options)
         });
 
         foreach (var entity in model.Model.GetEntityTypes())
-        foreach (var property in entity.GetProperties())
-            property.SetColumnName(System.Text.RegularExpressions.Regex.Replace(property.Name, "(?<!^)([A-Z])", "_$1").ToLowerInvariant());
+            foreach (var property in entity.GetProperties())
+                property.SetColumnName(System.Text.RegularExpressions.Regex.Replace(property.Name, "(?<!^)([A-Z])", "_$1").ToLowerInvariant());
     }
 }

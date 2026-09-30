@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using Corvees.Host;
+using Corvees.Host.Mcp;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;

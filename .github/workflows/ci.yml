@@ -31,3 +31,4 @@ jobs:
         with:
           dotnet-version: 10.0.x
       - run: dotnet test Corvees.slnx --configuration Release
+      - run: dotnet format Corvees.slnx --verify-no-changes --no-restore
