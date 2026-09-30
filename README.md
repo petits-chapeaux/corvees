@@ -78,6 +78,17 @@ curl -sS -X POST "http://localhost:5169/m/$MEMBER_TOKEN/mcp" \
 
 Pour provisionner en production, utiliser `scripts/admin.sh create-group NOM PREMIER_MEMBRE`, `add-member GROUPE_UUID NOM`, `rotate-token MEMBRE_UUID`, `delete-member MEMBRE_UUID` et `restore-member MEMBRE_UUID` avec les variables PostgreSQL d'un opérateur. Aucune route d'administration n'est publique. `dotnet test Corvees.slnx` exécute les tests sans base par défaut; définir `CORVEES_TEST_DATABASE_URL` pour les tests d'intégration PostgreSQL. `docker compose down -v` efface les données locales. Le mot de passe et le HTTP en clair sont réservés au loopback. En production, configurer `ConnectionStrings__Corvees`, `AllowedHosts`, TLS et le masquage des URL MCP; jamais journaliser ou partager les jetons.
 
+## Organisation et validation du backend
+
+La [note de maintenabilité .NET](docs/research/dotnet-maintainability.md) décrit les responsabilités des contrôleurs, services applicatifs, contrats et adaptateurs MCP, avec les sources consultées. Les contrats publics restent ceux de l'ADR 0002.
+
+```sh
+dotnet test Corvees.slnx --configuration Release
+dotnet format Corvees.slnx --verify-no-changes --no-restore
+```
+
+Définir `CORVEES_TEST_DATABASE_URL` vers une base PostgreSQL de test dédiée pour exécuter aussi les tests REST/MCP et de concurrence. Sans cette variable, ces tests sont explicitement ignorés. Les fixtures appliquent les migrations et nettoient les groupes qu'elles créent. La CI exécute la suite complète avec PostgreSQL et vérifie le formatage; les avertissements de compilation sont des erreurs. `dotnet format Corvees.slnx` corrige le formatage localement.
+
 ## Prochaines étapes
 
 - Créer des ADR pour choisir :
