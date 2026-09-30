@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Corvées</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: var(--color-background-primary, #ffffff);
+    --bg-soft: var(--color-background-secondary, #f5f4f0);
+    --text: var(--color-text-primary, #1f1e1b);
+    --muted: var(--color-text-secondary, #6b6960);
+    --border: var(--color-border-primary, #e2e0d8);
+    --accent: var(--color-text-info, #2f5fd0);
+    --danger: var(--color-text-danger, #b3261e);
+    --todo: #8a877c;
+    --progress: #b7791f;
+    --done: #2f855a;
+    --radius: var(--border-radius-md, 8px);
+    --font: var(--font-sans, system-ui, -apple-system, "Segoe UI", sans-serif);
+  }
+  :root[data-theme="dark"] {
+    --bg: var(--color-background-primary, #1f1e1b);
+    --bg-soft: var(--color-background-secondary, #2a2925);
+    --text: var(--color-text-primary, #f1efe8);
+    --muted: var(--color-text-secondary, #a8a59a);
+    --border: var(--color-border-primary, #3a3934);
+    --accent: var(--color-text-info, #8fb0ff);
+    --danger: var(--color-text-danger, #ff8a80);
+    --todo: #a8a59a;
+    --progress: #f0b44c;
+    --done: #68d391;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+      --bg: var(--color-background-primary, #1f1e1b);
+      --bg-soft: var(--color-background-secondary, #2a2925);
+      --text: var(--color-text-primary, #f1efe8);
+      --muted: var(--color-text-secondary, #a8a59a);
+      --border: var(--color-border-primary, #3a3934);
+      --accent: var(--color-text-info, #8fb0ff);
+      --danger: var(--color-text-danger, #ff8a80);
+      --todo: #a8a59a;
+      --progress: #f0b44c;
+      --done: #68d391;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 var(--font); }
+  main { padding: 12px 14px 14px; }
+  header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  header h1 { flex: 1; min-width: 0; margin: 0; font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+  button, select, input, textarea { font: inherit; color: inherit; }
+  button {
+    border: 1px solid var(--border); background: var(--bg); border-radius: var(--radius);
+    padding: 4px 10px; cursor: pointer;
+  }
+  button:hover:not(:disabled) { background: var(--bg-soft); }
+  button:disabled, select:disabled { opacity: .5; cursor: default; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+  button.danger { color: var(--danger); }
+  button.icon { padding: 2px 7px; }
+  button.link { border: 0; background: none; padding: 2px 0; color: var(--accent); }
+  input, textarea, select {
+    border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); padding: 5px 8px;
+  }
+  input, textarea { width: 100%; }
+  textarea { resize: vertical; min-height: 54px; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  .muted { color: var(--muted); }
+  .notice { margin: 0 0 10px; padding: 8px 10px; border-radius: var(--radius); background: var(--bg-soft); }
+  .notice.error { color: var(--danger); }
+  .empty { padding: 16px 0; text-align: center; }
+  .projects li + li, .steps li + li { border-top: 1px solid var(--border); }
+  .project {
+    display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left;
+    border: 0; border-radius: 0; background: none; padding: 9px 4px;
+  }
+  .project .title { display: flex; align-items: baseline; gap: 8px; font-weight: 600; }
+  .project .title span:first-child { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .badge {
+    flex: none; font-size: 12px; font-weight: 500; padding: 0 7px; border-radius: 999px;
+    border: 1px solid currentColor; color: var(--todo);
+  }
+  .badge.active, .badge.in_progress { color: var(--progress); }
+  .badge.complete, .badge.done { color: var(--done); }
+  .description { margin: 0 0 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .step { display: flex; align-items: flex-start; gap: 8px; padding: 8px 0; }
+  .step .body { flex: 1; min-width: 0; }
+  .step .body > div { overflow-wrap: anywhere; }
+  .step.done .step-title { text-decoration: line-through; color: var(--muted); }
+  .step .step-description { font-size: 13px; white-space: pre-wrap; }
+  .step select { flex: none; padding: 3px 4px; font-size: 13px; }
+  .actions { display: flex; flex: none; gap: 4px; }
+  .editor { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .row { display: flex; gap: 6px; justify-content: flex-end; }
+  form.add { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .more { margin-top: 8px; text-align: center; }
+  .next { font-size: 13px; }
+  .next strong { font-weight: 600; }
+  .deps { font-size: 13px; }
+  .badge.blocked { color: var(--muted); border-style: dashed; }
+  .step.next-step .step-title { font-weight: 600; }
+  .prerequisites { margin: 0 0 10px; font-size: 13px; }
+  @media (max-width: 420px) {
+    .step { flex-wrap: wrap; }
+    .step .actions { width: 100%; justify-content: flex-end; }
+  }
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script>
+(() => {
+  "use strict";
+
+  const PROTOCOL_VERSION = "2026-01-26";
+  const T = {
+    projects: "Projets",
+    refresh: "Actualiser",
+    loading: "Chargement…",
+    noProjects: "Aucun projet pour l’instant. Demandez à l’assistant d’en créer un.",
+    loadMore: "Afficher plus",
+    back: "← Projets",
+    noSteps: "Aucune étape. Ajoutez la première ci-dessous.",
+    archived: "Ce projet est archivé : désarchivez-le pour modifier ses étapes.",
+    newStep: "Nouvelle étape",
+    stepDescription: "Description (facultative)",
+    add: "Ajouter",
+    save: "Enregistrer",
+    cancel: "Annuler",
+    edit: "Modifier",
+    remove: "Supprimer",
+    confirmRemove: "Confirmer",
+    moveUp: "Monter",
+    moveDown: "Descendre",
+    titleRequired: "Le titre est obligatoire.",
+    conflict: "Ce projet a changé entre-temps; il a été rechargé. Réessayez au besoin.",
+    unexpected: "Une erreur est survenue.",
+    projectStatus: { planned: "Planifié", active: "En cours", complete: "Terminé", archived: "Archivé" },
+    stepStatus: { todo: "À faire", in_progress: "En cours", done: "Fait" },
+    nextStep: "Prochaine étape : ",
+    nextNone: { planned: "Aucune étape", active: "Aucune étape", complete: "Toutes les étapes sont faites", archived: "Archivé" },
+    after: "Après : ",
+    waiting: "En attente",
+    prerequisites: "Dépend de : ",
+    unknownProject: "projet indisponible"
+  };
+
+  // --- MCP Apps bridge (JSON-RPC 2.0 over postMessage with the host) ---
+
+  let nextRequestId = 1;
+  const pending = new Map();
+  let hostCapabilities = {};
+
+  const post = message => window.parent.postMessage(message, "*");
+  const notify = (method, params) => post({ jsonrpc: "2.0", method, params });
+  const respond = (id, result) => post({ jsonrpc: "2.0", id, result });
+  const request = (method, params) => new Promise((resolve, reject) => {
+    const id = nextRequestId++;
+    pending.set(id, { resolve, reject });
+    post({ jsonrpc: "2.0", id, method, params });
+  });
+
+  window.addEventListener("message", event => {
+    const message = event.data;
+    if (event.source !== window.parent || !message || message.jsonrpc !== "2.0") return;
+    if (!message.method) {
+      const waiting = pending.get(message.id);
+      if (!waiting) return;
+      pending.delete(message.id);
+      if (message.error) waiting.reject(new ToolError("protocol_error", message.error.message));
+      else waiting.resolve(message.result);
+      return;
+    }
+    switch (message.method) {
+      case "ui/notifications/tool-input":
+        toolArguments = withoutCursor(message.params?.arguments);
+        break;
+      case "ui/notifications/tool-result":
+        receiveInitialResult(message.params);
+        break;
+      case "ui/notifications/host-context-changed":
+        applyHostContext(message.params);
+        break;
+      case "ui/resource-teardown":
+      case "ping":
+        respond(message.id, {});
+        break;
+      default:
+        if (message.id !== undefined)
+          post({ jsonrpc: "2.0", id: message.id, error: { code: -32601, message: "Method not found" } });
+    }
+  });
+
+  class ToolError extends Error {
+    constructor(code, message) { super(message); this.code = code; }
+  }
+
+  async function callTool(name, args) {
+    const result = await request("tools/call", { name, arguments: args });
+    return unwrap(result);
+  }
+
+  function unwrap(result) {
+    const text = result?.content?.find(block => block.type === "text")?.text;
+    if (result?.isError) {
+      let error;
+      try { error = JSON.parse(text); } catch { error = { code: "error", message: text }; }
+      throw new ToolError(error.code, error.message || T.unexpected);
+    }
+    return result?.structuredContent ?? JSON.parse(text);
+  }
+
+  function applyHostContext(context) {
+    if (!context) return;
+    if (context.theme) document.documentElement.dataset.theme = context.theme;
+    for (const [name, value] of Object.entries(context.styles?.variables ?? {}))
+      if (value) document.documentElement.style.setProperty(name, value);
+  }
+
+  function reportSize() {
+    const { width, height } = document.documentElement.getBoundingClientRect();
+    notify("ui/notifications/size-changed", { width: Math.ceil(width), height: Math.ceil(height) });
+  }
+
+  function shareWithModel(text) {
+    if (!hostCapabilities.updateModelContext) return;
+    request("ui/update-model-context", { content: [{ type: "text", text }] }).catch(() => {});
+  }
+
+  // --- State ---
+
+  const state = {
+    view: "projects",
+    listArguments: {},
+    projects: [],
+    nextCursor: null,
+    project: null,
+    steps: [],
+    loading: true,
+    busy: false,
+    notice: null,
+    prerequisites: [],
+    editingStepId: null,
+    confirmingStepId: null
+  };
+  let receivedInitialResult = false;
+  let toolArguments = {};
+
+  function withoutCursor(args) {
+    const copy = { ...(args ?? {}) };
+    delete copy.cursor;
+    return copy;
+  }
+
+  function receiveInitialResult(result) {
+    receivedInitialResult = true;
+    try {
+      const content = unwrap(result);
+      if (content?.kind === "get_project") return openProject(content.data.id, { initial: content.data });
+      if (content?.kind !== "list_projects") return loadProjects();
+      state.listArguments = toolArguments;
+      state.projects = content.data;
+      state.nextCursor = content.nextCursor;
+      state.loading = false;
+      render();
+    } catch (error) {
+      state.loading = false;
+      state.notice = { error: true, text: error.message };
+      render();
+    }
+  }
+
+  async function run(action, { reload = true } = {}) {
+    state.busy = true;
+    state.notice = null;
+    render();
+    try {
+      await action();
+      if (reload && state.project) await openProject(state.project.id, { quiet: true });
+    } catch (error) {
+      if (error.code === "version_conflict" && state.project) {
+        await openProject(state.project.id, { quiet: true }).catch(() => {});
+        state.notice = { text: T.conflict };
+      } else {
+        state.notice = { error: true, text: error.message || T.unexpected };
+      }
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  // --- Reads ---
+
+  async function loadProjects({ append = false } = {}) {
+    await run(async () => {
+      const args = { ...state.listArguments };
+      if (append && state.nextCursor) args.cursor = state.nextCursor;
+      const content = await callTool("list_projects", args);
+      state.projects = append ? state.projects.concat(content.data) : content.data;
+      state.nextCursor = content.nextCursor;
+      state.loading = false;
+    }, { reload: false });
+  }
+
+  async function listAllSteps(projectId) {
+    const steps = [];
+    let cursor = null;
+    do {
+      const content = await callTool("list_steps", cursor ? { projectId, limit: 100, cursor } : { projectId, limit: 100 });
+      steps.push(...content.data);
+      cursor = content.nextCursor;
+    } while (cursor);
+    return steps;
+  }
+
+  async function openProject(projectId, { quiet = false, initial = null } = {}) {
+    const load = async () => {
+      const [project, steps] = await Promise.all([
+        initial ?? callTool("get_project", { projectId }).then(content => content.data),
+        listAllSteps(projectId)
+      ]);
+      state.view = "project";
+      state.loading = false;
+      state.project = project;
+      state.steps = steps;
+      state.prerequisites = await Promise.all(project.dependencies.map(id =>
+        callTool("get_project", { projectId: id }).then(content => content.data, () => ({ id, title: T.unknownProject, status: null }))));
+      state.editingStepId = null;
+      state.confirmingStepId = null;
+    };
+    if (quiet) return load();
+    await run(load, { reload: false });
+  }
+
+  function backToProjects() {
+    state.view = "projects";
+    state.project = null;
+    state.steps = [];
+    state.prerequisites = [];
+    state.notice = null;
+    loadProjects();
+  }
+
+  // --- Step mutations (every write carries the versions it was based on) ---
+
+  const stepKey = step => ({ projectId: state.project.id, stepId: step.id });
+
+  function createStep(title, description) {
+    return run(async () => {
+      const args = { projectId: state.project.id, title, expectedListVersion: state.project.stepListVersion };
+      if (description) args.description = description;
+      await callTool("create_step", args);
+      shareWithModel(`L’utilisateur a ajouté l’étape « ${title} » au projet « ${state.project.title} ».`);
+    });
+  }
+
+  function updateStep(step, changes) {
+    return run(async () => {
+      await callTool("update_step", { ...stepKey(step), ...changes, expectedVersion: step.version });
+      shareWithModel(`L’utilisateur a modifié l’étape « ${changes.title ?? step.title} » du projet « ${state.project.title} ».`);
+    });
+  }
+
+  function deleteStep(step) {
+    return run(async () => {
+      await callTool("delete_step", {
+        ...stepKey(step), expectedVersion: step.version, expectedListVersion: state.project.stepListVersion
+      });
+      shareWithModel(`L’utilisateur a supprimé l’étape « ${step.title} » du projet « ${state.project.title} ».`);
+    });
+  }
+
+  function moveStep(step, offset) {
+    const index = state.steps.indexOf(step);
+    const target = state.steps[index + offset];
+    if (!target) return;
+    return run(() => callTool("move_step", {
+      ...stepKey(step), targetStepId: target.id,
+      placement: offset < 0 ? "before" : "after", expectedListVersion: state.project.stepListVersion
+    }));
+  }
+
+  // --- Rendering (text is always set with textContent, never parsed as HTML) ---
+
+  function h(tag, props, ...children) {
+    const element = document.createElement(tag);
+    for (const [key, value] of Object.entries(props ?? {})) {
+      if (value === undefined || value === null || value === false) continue;
+      if (key.startsWith("on")) element.addEventListener(key.slice(2), value);
+      else if (key === "class") element.className = value;
+      else if (key in element) element[key] = value;
+      else element.setAttribute(key, value === true ? "" : value);
+    }
+    for (const child of children.flat())
+      if (child !== null && child !== undefined && child !== false)
+        element.append(child instanceof Node ? child : document.createTextNode(String(child)));
+    return element;
+  }
+
+  const badge = (status, labels) => h("span", { class: `badge ${status}` }, labels[status] ?? status);
+
+  function render() {
+    const app = document.getElementById("app");
+    app.replaceChildren(...(state.view === "project" ? renderProject() : renderProjects()));
+  }
+
+  function renderNotice() {
+    return state.notice && h("p", { class: `notice${state.notice.error ? " error" : ""}`, role: "status" }, state.notice.text);
+  }
+
+  function renderProjects() {
+    const header = h("header", {},
+      h("h1", {}, T.projects),
+      h("button", { onclick: () => loadProjects(), disabled: state.busy }, T.refresh));
+    if (state.loading) return [header, renderNotice(), h("p", { class: "muted empty" }, T.loading)].filter(Boolean);
+    const list = state.projects.length === 0
+      ? h("p", { class: "muted empty" }, T.noProjects)
+      : h("ul", { class: "projects" }, state.projects.map(project => h("li", {},
+          h("button", { class: "project", disabled: state.busy, onclick: () => openProject(project.id) },
+            h("span", { class: "title" }, h("span", {}, project.title), badge(project.status, T.projectStatus)),
+            renderNext(project),
+            project.description && h("span", { class: "muted clamp" }, project.description),
+            project.location?.name && h("span", { class: "muted" }, project.location.name)))));
+    const more = state.nextCursor && h("div", { class: "more" },
+      h("button", { onclick: () => loadProjects({ append: true }), disabled: state.busy }, T.loadMore));
+    return [header, renderNotice(), list, more].filter(Boolean);
+  }
+
+  function renderNext(project) {
+    return project.nextStep
+      ? h("span", { class: "next" }, T.nextStep, h("strong", {}, project.nextStep.title))
+      : h("span", { class: "next muted" }, T.nextNone[project.status]);
+  }
+
+  function renderPrerequisites() {
+    if (state.prerequisites.length === 0) return null;
+    return h("p", { class: "prerequisites muted" }, T.prerequisites,
+      state.prerequisites.map((prerequisite, index) => [
+        index > 0 && ", ",
+        prerequisite.title,
+        prerequisite.status && ` (${T.projectStatus[prerequisite.status].toLowerCase()})`
+      ]));
+  }
+
+  function renderProject() {
+    const project = state.project;
+    const readOnly = project.status === "archived" || state.busy;
+    const header = h("header", {},
+      h("button", { class: "link", onclick: backToProjects, disabled: state.busy }, T.back));
+    const title = h("header", {}, h("h1", {}, project.title), badge(project.status, T.projectStatus));
+    const steps = state.steps.length === 0
+      ? h("p", { class: "muted empty" }, T.noSteps)
+      : h("ul", { class: "steps" }, state.steps.map((step, index) => renderStep(step, index, readOnly)));
+    return [
+      header, title,
+      project.description && h("p", { class: "description muted" }, project.description),
+      renderPrerequisites(),
+      h("p", { class: "next" }, renderNext(project)),
+      project.status === "archived" && h("p", { class: "notice" }, T.archived),
+      renderNotice(), steps,
+      project.status !== "archived" && renderAddForm()
+    ].filter(Boolean);
+  }
+
+  function renderStep(step, index, readOnly) {
+    if (state.editingStepId === step.id) return h("li", { class: "step" }, renderEditor(step));
+    const confirming = state.confirmingStepId === step.id;
+    const prerequisites = step.dependencies.map(id => state.steps.find(other => other.id === id)).filter(Boolean);
+    const waiting = step.status !== "done" && prerequisites.some(prerequisite => prerequisite.status !== "done");
+    const isNext = state.project.nextStep?.id === step.id;
+    return h("li", { class: `step ${step.status}${isNext ? " next-step" : ""}` },
+      h("select", {
+        "aria-label": step.title, disabled: readOnly,
+        onchange: event => updateStep(step, { status: event.target.value })
+      }, Object.entries(T.stepStatus).map(([value, label]) => h("option", { value, selected: value === step.status }, label))),
+      h("div", { class: "body" },
+        h("div", { class: "step-title" }, step.title, waiting && " ", waiting && h("span", { class: "badge blocked" }, T.waiting)),
+        step.description && h("div", { class: "step-description muted" }, step.description),
+        prerequisites.length > 0 && h("div", { class: "deps muted" }, T.after + prerequisites.map(prerequisite => prerequisite.title).join(", "))),
+      h("div", { class: "actions" },
+        h("button", { class: "icon", title: T.moveUp, "aria-label": T.moveUp, disabled: readOnly || index === 0, onclick: () => moveStep(step, -1) }, "↑"),
+        h("button", { class: "icon", title: T.moveDown, "aria-label": T.moveDown, disabled: readOnly || index === state.steps.length - 1, onclick: () => moveStep(step, 1) }, "↓"),
+        h("button", { disabled: readOnly, onclick: () => { state.editingStepId = step.id; state.confirmingStepId = null; render(); } }, T.edit),
+        h("button", {
+          class: "danger", disabled: readOnly,
+          onclick: () => {
+            if (confirming) return deleteStep(step);
+            state.confirmingStepId = step.id;
+            render();
+          }
+        }, confirming ? T.confirmRemove : T.remove)));
+  }
+
+  function renderEditor(step) {
+    const title = h("input", { value: step.title, maxLength: 200, "aria-label": T.newStep });
+    const description = h("textarea", { value: step.description ?? "", maxLength: 10000, placeholder: T.stepDescription, "aria-label": T.stepDescription });
+    const form = h("form", {
+      class: "editor",
+      onsubmit: event => {
+        event.preventDefault();
+        const newTitle = title.value.trim();
+        if (!newTitle) { state.notice = { error: true, text: T.titleRequired }; return render(); }
+        const newDescription = description.value.trim() || null;
+        if (newTitle === step.title && newDescription === (step.description ?? null)) {
+          state.editingStepId = null;
+          return render();
+        }
+        updateStep(step, { title: newTitle, description: newDescription });
+      }
+    }, title, description, h("div", { class: "row" },
+      h("button", { type: "button", onclick: () => { state.editingStepId = null; render(); } }, T.cancel),
+      h("button", { type: "submit", class: "primary" }, T.save)));
+    queueMicrotask(() => title.focus());
+    return form;
+  }
+
+  function renderAddForm() {
+    const title = h("input", { placeholder: T.newStep, maxLength: 200, "aria-label": T.newStep, disabled: state.busy });
+    const description = h("textarea", { placeholder: T.stepDescription, maxLength: 10000, "aria-label": T.stepDescription, disabled: state.busy, rows: 2 });
+    return h("form", {
+      class: "add",
+      onsubmit: event => {
+        event.preventDefault();
+        const value = title.value.trim();
+        if (!value) { state.notice = { error: true, text: T.titleRequired }; return render(); }
+        createStep(value, description.value.trim());
+      }
+    }, title, description, h("div", { class: "row" }, h("button", { type: "submit", class: "primary", disabled: state.busy }, T.add)));
+  }
+
+  // --- Start ---
+
+  render();
+  new ResizeObserver(reportSize).observe(document.documentElement);
+
+  request("ui/initialize", {
+    protocolVersion: PROTOCOL_VERSION,
+    appInfo: { name: "corvees-project-board", version: "1.0.0" },
+    appCapabilities: {}
+  }).then(result => {
+    hostCapabilities = result?.hostCapabilities ?? {};
+    applyHostContext(result?.hostContext);
+    notify("ui/notifications/initialized", {});
+    // Some hosts open the view without replaying the tool result; fetch it ourselves then.
+    setTimeout(() => { if (!receivedInitialResult) loadProjects(); }, 1500);
+  }).catch(error => {
+    state.loading = false;
+    state.notice = { error: true, text: error.message || T.unexpected };
+    render();
+  });
+})();
+</script>
+</body>
+</html>

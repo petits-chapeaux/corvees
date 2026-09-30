@@ -15,8 +15,10 @@ public sealed record LocationResource(Guid Id, string Name, string? Address, lon
 
 public sealed record ProjectLocation(Guid Id, bool Available, string? Name);
 
+public sealed record ProjectNextStep(Guid Id, string Title, string Status);
+
 public sealed record ProjectResource(Guid Id, string Title, string? Description, Guid? LocationId,
-    ProjectLocation? Location, string Status, Guid[] Dependencies, long Version, long StepListVersion,
+    ProjectLocation? Location, string Status, Guid[] Dependencies, ProjectNextStep? NextStep, long Version, long StepListVersion,
     DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, DateTimeOffset? ArchivedAt, DateTimeOffset? DeletedAt) : IVersionedResource;
 
 public sealed record StepResource(Guid Id, Guid ProjectId, string Title, string? Description, string Status,

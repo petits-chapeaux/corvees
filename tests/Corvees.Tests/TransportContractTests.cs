@@ -273,6 +273,41 @@ public sealed class TransportContractTests(IntegrationHost host) : IClassFixture
         }
     }
 
+    [PostgresFact]
+    public async Task ProjectBoardViewIsServedAsAnMcpAppResource()
+    {
+        var listed = (await McpRequestAsync("resources/list", new { }))["result"]!["resources"]!.AsArray();
+        var resource = Assert.Single(listed)!;
+        Assert.Equal("ui://corvees/project-board", resource["uri"]!.GetValue<string>());
+        Assert.Equal("text/html;profile=mcp-app", resource["mimeType"]!.GetValue<string>());
+
+        var read = await McpRequestAsync("resources/read", new { uri = "ui://corvees/project-board" });
+        var contents = Assert.Single(read["result"]!["contents"]!.AsArray())!;
+        Assert.Equal("text/html;profile=mcp-app", contents["mimeType"]!.GetValue<string>());
+        Assert.Contains("ui/initialize", contents["text"]!.GetValue<string>());
+
+        var missing = await McpRequestAsync("resources/read", new { uri = "ui://corvees/missing" });
+        Assert.Equal(-32002, missing["error"]!["code"]!.GetValue<int>());
+    }
+
+    [PostgresFact]
+    public async Task ProjectReadsAddAReadableSummaryAfterTheJsonCopy()
+    {
+        var created = await McpAsync("create_project", new { title = "Summary contract" });
+        Assert.Single(created["content"]!.AsArray());
+        var id = created["structuredContent"]!["data"]!["id"]!.GetValue<string>();
+        await McpAsync("create_step", new { projectId = id, title = "First step", expectedListVersion = 1 });
+
+        var read = await McpAsync("get_project", new { projectId = id });
+        var blocks = read["content"]!.AsArray();
+        Assert.Equal(2, blocks.Count);
+        Assert.True(JsonNode.DeepEquals(read["structuredContent"], JsonNode.Parse(blocks[0]!["text"]!.GetValue<string>())));
+        Assert.Contains("Prochaine étape : First step", blocks[1]!["text"]!.GetValue<string>());
+
+        var list = await McpAsync("list_projects", new { limit = 100 });
+        Assert.Contains("- Summary contract (planifié) — prochaine étape : First step", list["content"]![1]!["text"]!.GetValue<string>());
+    }
+
     private async Task<RestResponse> RestAsync(HttpMethod method, string path, object? body = null, long? version = null, string? token = null)
     {
         using var request = new HttpRequestMessage(method, "/api/v1" + path);
@@ -286,11 +321,14 @@ public sealed class TransportContractTests(IntegrationHost host) : IClassFixture
         return new RestResponse(response.StatusCode, string.IsNullOrEmpty(text) ? new JsonObject() : JsonNode.Parse(text)!, response.Headers.ETag?.ToString());
     }
 
-    private async Task<JsonNode> McpAsync(string name, object arguments, string? token = null)
+    private async Task<JsonNode> McpAsync(string name, object arguments, string? token = null) =>
+        (await McpRequestAsync("tools/call", new { name, arguments }, token))["result"]!;
+
+    private async Task<JsonNode> McpRequestAsync(string method, object parameters, string? token = null)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, $"/m/{token ?? host.Token}/mcp")
         {
-            Content = JsonContent.Create(new { jsonrpc = "2.0", id = 1, method = "tools/call", @params = new { name, arguments } })
+            Content = JsonContent.Create(new { jsonrpc = "2.0", id = 1, method, @params = parameters })
         };
         request.Headers.Accept.ParseAdd("application/json, text/event-stream");
         request.Headers.TryAddWithoutValidation("MCP-Protocol-Version", "2025-11-25");
@@ -299,7 +337,7 @@ public sealed class TransportContractTests(IntegrationHost host) : IClassFixture
         var text = await response.Content.ReadAsStringAsync();
         var json = response.Content.Headers.ContentType?.MediaType == "text/event-stream"
             ? text.Split('\n').First(line => line.StartsWith("data: ", StringComparison.Ordinal))[6..] : text;
-        return JsonNode.Parse(json)!["result"]!;
+        return JsonNode.Parse(json)!;
     }
 
     private static JsonNode Error(JsonNode result)

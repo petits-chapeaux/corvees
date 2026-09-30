@@ -48,6 +48,15 @@ public sealed class LocalHostTests : IClassFixture<LocalHostFactory>
             Assert.Equal("object", tool.OutputSchema?.GetProperty("type").GetString());
         });
     }
+
+    [Fact]
+    public void ProjectReadsOpenTheProjectBoardView()
+    {
+        var withView = ToolCatalog.Tools.Where(tool => tool.Meta != null).ToArray();
+        Assert.Equal(["list_projects", "get_project"], withView.Select(tool => tool.Name));
+        Assert.All(withView, tool => Assert.Equal(AppCatalog.ProjectBoardUri, tool.Meta!["ui"]!["resourceUri"]!.GetValue<string>()));
+        Assert.Equal(AppCatalog.ProjectBoardUri, Assert.Single(AppCatalog.Resources).Uri);
+    }
 }
 
 public sealed class LocalHostFactory : WebApplicationFactory<Program>

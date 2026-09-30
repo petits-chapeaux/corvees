@@ -12,6 +12,7 @@ public static class ToolCatalog
         Description = definition.Name.Replace('_', ' ') + " in the authenticated member's group. UUIDs are stable; writes require current versions.",
         InputSchema = JsonSerializer.SerializeToElement(InputSchemas.For(definition)),
         OutputSchema = JsonSerializer.SerializeToElement(OutputSchemas.For(definition)),
+        Meta = AppCatalog.ViewFor(definition.Name) is { } view ? AppCatalog.ToolMeta(view) : null,
         Annotations = new ToolAnnotations
         {
             ReadOnlyHint = definition.ReadOnly,
