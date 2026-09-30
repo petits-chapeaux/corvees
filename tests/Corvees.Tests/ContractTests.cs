@@ -140,7 +140,7 @@ public sealed class ContractTests
                 ResourceKind.Group => new GroupResource(id, "Group", 1, now, now),
                 ResourceKind.Member => new MemberResource(id, id, "Member", 1, now, now, null),
                 ResourceKind.Location => new LocationResource(id, "Location", null, 1, now, now, null),
-                ResourceKind.Project => new ProjectResource(id, "Project", null, null, null, "planned", [], 1, 1, now, now, null, null),
+                ResourceKind.Project => new ProjectResource(id, "Project", null, null, null, "planned", [], null, 1, 1, now, now, null, null),
                 ResourceKind.Step => new StepResource(id, id, "Step", null, "todo", 1, [], 1, now, now, null),
                 _ => throw new InvalidOperationException()
             };

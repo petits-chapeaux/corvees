@@ -65,6 +65,29 @@ public sealed class ProjectApiTests(IntegrationHost host) : IClassFixture<Integr
     }
 
     [PostgresFact]
+    public async Task NextStepPrefersWorkInProgressAndSkipsStepsWaitingOnPrerequisites()
+    {
+        var (_, p) = await Call(HttpMethod.Post, "/projects", new { title = "Next step test" });
+        Assert.Equal(JsonValueKind.Null, p.GetProperty("data").GetProperty("nextStep").ValueKind);
+        var path = "/projects/" + p.GetProperty("data").GetProperty("id").GetString();
+        var (_, a) = await Call(HttpMethod.Post, path + "/steps", new { title = "A" }, 1);
+        var (_, b) = await Call(HttpMethod.Post, path + "/steps", new { title = "B" }, 2);
+        var aId = a.GetProperty("data").GetProperty("id").GetString();
+        var bId = b.GetProperty("data").GetProperty("id").GetString();
+        async Task<JsonElement> NextStep() => (await Call(HttpMethod.Get, path)).json.GetProperty("data").GetProperty("nextStep");
+
+        Assert.Equal(aId, (await NextStep()).GetProperty("id").GetString());
+        await Call(HttpMethod.Post, path + $"/steps/{aId}/dependencies", new { prerequisiteId = bId }, 1);
+        Assert.Equal(bId, (await NextStep()).GetProperty("id").GetString());
+        await Call(HttpMethod.Patch, path + $"/steps/{bId}", new { status = "in_progress" }, 1);
+        Assert.Equal("in_progress", (await NextStep()).GetProperty("status").GetString());
+        await Call(HttpMethod.Patch, path + $"/steps/{bId}", new { status = "done" }, 2);
+        Assert.Equal(aId, (await NextStep()).GetProperty("id").GetString());
+        await Call(HttpMethod.Patch, path + $"/steps/{aId}", new { status = "done" }, 2);
+        Assert.Equal(JsonValueKind.Null, (await NextStep()).ValueKind);
+    }
+
+    [PostgresFact]
     public async Task DeletedPositionsAndLocationLinksSurviveRestoration()
     {
         var (_, location) = await Call(HttpMethod.Post, "/locations", new { name = "Maison" });

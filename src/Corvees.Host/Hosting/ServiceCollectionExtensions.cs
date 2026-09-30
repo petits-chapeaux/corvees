@@ -30,7 +30,9 @@ public static class ServiceCollectionExtensions
         services.AddMcpServer()
             .WithHttpTransport(options => options.SessionMode = HttpServerSessionMode.Stateless)
             .WithListToolsHandler((_, _) => ValueTask.FromResult(new ListToolsResult { Tools = ToolCatalog.Tools.ToList() }))
-            .WithCallToolHandler(McpToolHandler.CallAsync);
+            .WithCallToolHandler(McpToolHandler.CallAsync)
+            .WithListResourcesHandler(AppCatalog.ListAsync)
+            .WithReadResourceHandler(AppCatalog.ReadAsync);
         return services;
     }
 }

@@ -3,6 +3,7 @@
 - **Statut :** accepté
 - **Date :** 2026-09-29
 - **Issue :** [#2](https://github.com/petits-chapeaux/corvees/issues/2)
+- **Complément :** champ calculé `nextStep` ajouté aux projets, compatible avec `schemaVersion:1`; voir [prototype MCP Apps](../research/mcp-apps.md)
 - **Suite de :** [ADR 0001](0001-stack-backend-mcp.md). La décision d'un jeton partagé par groupe est remplacée ici par un jeton par membre. Le transport MCP demeure sans OAuth.
 
 ## Décision et périmètre

@@ -46,5 +46,11 @@ public sealed class ProjectQueries(CorveesDbContext db)
         db.ProjectDependencies.Where(link => link.ProjectId == project.Id &&
                 db.Projects.Any(prerequisite => prerequisite.Id == link.PrerequisiteId && prerequisite.DeletedAt == null))
             .OrderBy(link => link.PrerequisiteId).Select(link => link.PrerequisiteId).ToArray(),
+        db.Steps.Where(step => project.ArchivedAt == null && step.ProjectId == project.Id && step.DeletedAt == null && step.Status != "done" &&
+                !db.StepDependencies.Any(link => link.StepId == step.Id &&
+                    db.Steps.Any(prerequisite => prerequisite.Id == link.PrerequisiteId && prerequisite.DeletedAt == null && prerequisite.Status != "done")))
+            .OrderBy(step => step.Status == "in_progress" ? 0 : 1).ThenBy(step => step.Position)
+            .Select(step => new ProjectNextStep(step.Id, step.Title, step.Status))
+            .FirstOrDefault(),
         project.Version, project.StepListVersion, project.CreatedAt, project.UpdatedAt, project.ArchivedAt, project.DeletedAt));
 }

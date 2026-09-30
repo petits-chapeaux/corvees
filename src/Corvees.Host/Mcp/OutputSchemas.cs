@@ -60,6 +60,12 @@ internal static class OutputSchemas
                 };
                 properties["status"] = new { type = "string", @enum = new[] { "planned", "active", "complete", "archived" } };
                 properties["dependencies"] = Dependencies;
+                properties["nextStep"] = new
+                {
+                    type = new[] { "object", "null" },
+                    properties = new { id = Uuid, title = Text, status = new { type = "string", @enum = new[] { "todo", "in_progress" } } },
+                    required = new[] { "id", "title", "status" }
+                };
                 properties["stepListVersion"] = Version;
                 properties["archivedAt"] = NullableDateTime;
                 break;

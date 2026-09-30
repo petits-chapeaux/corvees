@@ -76,6 +76,8 @@ curl -sS -X POST "http://localhost:5169/m/$MEMBER_TOKEN/mcp" \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"curl","version":"1.0"}}}'
 ```
 
+Les clients compatibles [MCP Apps](https://modelcontextprotocol.io/extensions/apps) (Claude web et Desktop, ChatGPT, VS Code Copilot, Cursor…) affichent une vue interactive quand l'agent appelle `list_projects` (projets, statut, prochaine étape) ou `get_project` (étapes, prérequis, édition). La vue est la ressource `ui://corvees/project-board` ([source](src/Corvees.Host/Mcp/Apps/project-board.html)); elle n'appelle que les outils MCP existants, par l'hôte, et ne voit jamais le jeton. Les autres clients, dont Claude Code, reçoivent le JSON et un résumé textuel. Claude Desktop n'accepte un serveur local qu'en stdio : `npx mcp-remote <URL MCP> --allow-http`. Constats et recommandation : [docs/research/mcp-apps.md](docs/research/mcp-apps.md).
+
 Pour provisionner en production, utiliser `scripts/admin.sh create-group NOM PREMIER_MEMBRE`, `add-member GROUPE_UUID NOM`, `rotate-token MEMBRE_UUID`, `delete-member MEMBRE_UUID` et `restore-member MEMBRE_UUID` avec les variables PostgreSQL d'un opérateur. Aucune route d'administration n'est publique. `dotnet test Corvees.slnx` exécute les tests sans base par défaut; définir `CORVEES_TEST_DATABASE_URL` pour les tests d'intégration PostgreSQL. `docker compose down -v` efface les données locales. Le mot de passe et le HTTP en clair sont réservés au loopback. En production, configurer `ConnectionStrings__Corvees`, `AllowedHosts`, TLS et le masquage des URL MCP; jamais journaliser ou partager les jetons.
 
 ## Organisation et validation du backend

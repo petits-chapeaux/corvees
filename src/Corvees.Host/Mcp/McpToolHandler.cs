@@ -21,11 +21,10 @@ public static class McpToolHandler
             var service = http.RequestServices.GetRequiredService<BusinessService>();
             var result = await service.ExecuteAsync(operation.Operation, arguments, ct);
             var content = JsonSerializer.SerializeToElement(result, result.GetType(), JsonSerializerOptions.Web);
-            return new CallToolResult
-            {
-                StructuredContent = content,
-                Content = [new TextContentBlock { Text = content.GetRawText() }]
-            };
+            List<ContentBlock> blocks = [new TextContentBlock { Text = content.GetRawText() }];
+            if (ToolText.Summarize(result) is { } summary)
+                blocks.Add(new TextContentBlock { Text = summary });
+            return new CallToolResult { StructuredContent = content, Content = blocks };
         }
         catch (DomainException exception)
         {

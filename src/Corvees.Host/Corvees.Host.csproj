@@ -12,6 +12,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Mcp/Apps/*.html" LogicalName="Corvees.Host.Mcp.Apps.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Corvees.Infrastructure\Corvees.Infrastructure.csproj" />
   </ItemGroup>
 
