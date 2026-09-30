@@ -2,7 +2,8 @@
 
 - **Statut :** accepté, à réviser après le spike
 - **Date :** 2026-09-29
-- **Issue :** [#3](https://github.com/petits-chapeaux/corvees/issues/3) (schémas d'outils hors périmètre, voir [ADR 0002](0002-project-tools-and-schemas.md))
+- **Issue :** [#3](https://github.com/petits-chapeaux/corvees/issues/3) (schémas d'outils hors périmètre, voir [#2](https://github.com/petits-chapeaux/corvees/issues/2))
+- **Remplacement partiel :** la décision d'authentification est remplacée par [ADR 0002](0002-project-tools-and-schemas.md)
 
 ## Contexte
 
@@ -19,7 +20,7 @@ Backend MCP distant (HTTPS), sans compte utilisateur, données minuscules, usage
 |---|---|
 | Langage | C# sur .NET 10, ASP.NET Core |
 | MCP | SDK officiel C# (`ModelContextProtocol.AspNetCore`), Streamable HTTP, sans état |
-| Authentification | décision remplacée par [ADR 0002](0002-project-tools-and-schemas.md) : jeton par membre, URL MCP `/m/{jeton}/mcp`, en-tête REST |
+| Authentification | aucune; URL de capacité `/g/{jeton}/mcp` (OAuth dans un ADR ultérieur) |
 | Base de données | PostgreSQL standard, hébergeur à déterminer |
 | Accès et migrations | EF Core 10 + Npgsql; migrations EF appliquées par un *bundle* |
 | Hébergement | Conteneur standard, cible à déterminer; un serveur personnel convient |
