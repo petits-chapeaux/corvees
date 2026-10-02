@@ -66,7 +66,15 @@ Prérequis : SDK .NET 10, OpenSSL, `psql` et Docker Compose (ou Podman avec une 
 ./scripts/dev.sh
 ```
 
-Le script démarre Postgres, restaure l'outil EF, applique les migrations et crée le groupe et le membre de développement s'ils n'existent pas. Il affiche le même jeton et la même URL MCP à chaque exécution, même après un `docker compose down -v`. Les redémarrages conservent les identifiants et les données existantes. Ce jeton est public, déterministe et réservé à la base locale sur loopback; ne jamais l'utiliser dans un autre environnement. Le provisionnement de production conserve ses jetons aléatoires. Le serveur écoute sur `http://localhost:5169`. Vérifier `/healthz`, `/readyz` et la racine publique `/api/v1`. Les autres routes REST demandent `Authorization: Bearer <jeton>`.
+Le script démarre Postgres, restaure l'outil EF, applique les migrations et appelle `scripts/seed.sh` pour créer le groupe et le membre de développement s'ils n'existent pas. Il affiche le même jeton et la même URL MCP à chaque exécution, même après un `docker compose down -v`. Les redémarrages conservent les identifiants et les données existantes. Ce jeton est public, déterministe et réservé à la base locale sur loopback; ne jamais l'utiliser dans un autre environnement. Le provisionnement de production conserve ses jetons aléatoires. Le serveur écoute sur `http://localhost:5169`. Vérifier `/healthz`, `/readyz` et la racine publique `/api/v1`. Les autres routes REST demandent `Authorization: Bearer <jeton>`.
+
+Pour relancer uniquement le seed, sans démarrer le backend :
+
+```sh
+./scripts/seed.sh
+```
+
+La base locale doit être démarrée et les migrations déjà appliquées. Le seed cible uniquement `127.0.0.1:54329/corvees` et ne modifie pas les données existantes.
 
 ```sh
 export MEMBER_TOKEN='<jeton affiché par le script>'
@@ -88,7 +96,7 @@ dotnet format Corvees.slnx --verify-no-changes --no-restore
 CORVEES_SCRIPT_TEST_DATABASE_URL='postgresql://corvees:local-only@127.0.0.1:54329/corvees' bash tests/scripts/dev-test.sh
 ```
 
-Le test du script de démarrage utilise une base migrée, isole ses données dans un schéma temporaire et vérifie la stabilité du jeton, la conservation des données et les jetons aléatoires de production.
+Le test du script de démarrage utilise une base migrée, isole ses données dans un schéma temporaire et vérifie le seed autonome, la stabilité du jeton, la conservation des données et les jetons aléatoires de production.
 
 Définir `CORVEES_TEST_DATABASE_URL` vers une base PostgreSQL de test dédiée pour exécuter aussi les tests REST/MCP et de concurrence. Sans cette variable, ces tests sont explicitement ignorés. Les fixtures appliquent les migrations et nettoient les groupes qu'elles créent. La CI exécute la suite complète avec PostgreSQL et vérifie le formatage; les avertissements de compilation sont des erreurs. `dotnet format Corvees.slnx` corrige le formatage localement.
 
