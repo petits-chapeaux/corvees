@@ -1,0 +1,108 @@
+services:
+  postgres:
+    image: postgres:17-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: corvees
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      CORVEES_OPERATOR_PASSWORD: ${CORVEES_OPERATOR_PASSWORD:?Set CORVEES_OPERATOR_PASSWORD}
+      CORVEES_APP_PASSWORD: ${CORVEES_APP_PASSWORD:?Set CORVEES_APP_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres-init.sh:/docker-entrypoint-initdb.d/10-corvees.sh:ro
+    networks: [database]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d corvees"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  app:
+    image: ${CORVEES_APP_IMAGE:-corvees-app:${CORVEES_RELEASE:?Set CORVEES_RELEASE}}
+    pull_policy: never
+    build:
+      context: .
+      target: app
+      args:
+        SOURCE_REVISION: ${CORVEES_RELEASE:?Set CORVEES_RELEASE}
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Corvees: Host=postgres;Database=corvees;Username=corvees_app;Password=${CORVEES_APP_PASSWORD:?Set CORVEES_APP_PASSWORD};GSS Encryption Mode=Disable
+      AllowedHosts: ${CORVEES_ALLOWED_HOSTS:-localhost};localhost;127.0.0.1
+      ReverseProxy__Address: ${CORVEES_TRUSTED_PROXY:-}
+    ports:
+      - "127.0.0.1:${CORVEES_HTTP_PORT:-5169}:8080"
+    networks: [default, database]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--max-time", "3", "--header", "Host: localhost", "http://127.0.0.1:8080/readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  migrate:
+    image: ${CORVEES_MIGRATE_IMAGE:-corvees-migrate:${CORVEES_RELEASE:?Set CORVEES_RELEASE}}
+    pull_policy: never
+    build:
+      context: .
+      target: migrate
+      args:
+        SOURCE_REVISION: ${CORVEES_RELEASE:?Set CORVEES_RELEASE}
+    profiles: [tools]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      AllowedHosts: localhost
+      ConnectionStrings__Corvees: Host=postgres;Database=corvees;Username=corvees_operator;Password=${CORVEES_OPERATOR_PASSWORD:?Set CORVEES_OPERATOR_PASSWORD};GSS Encryption Mode=Disable
+    networks: [database]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+  tools:
+    image: ${CORVEES_TOOLS_IMAGE:-corvees-tools:${CORVEES_RELEASE:?Set CORVEES_RELEASE}}
+    pull_policy: never
+    build:
+      context: .
+      target: tools
+      args:
+        SOURCE_REVISION: ${CORVEES_RELEASE:?Set CORVEES_RELEASE}
+    profiles: [tools]
+    environment:
+      PGHOST: postgres
+      PGDATABASE: corvees
+      PGUSER: corvees_operator
+      PGPASSWORD: ${CORVEES_OPERATOR_PASSWORD:?Set CORVEES_OPERATOR_PASSWORD}
+    networks: [database]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    logging:
+      driver: none
+
+networks:
+  database:
+    internal: true
+
+volumes:
+  postgres-data:

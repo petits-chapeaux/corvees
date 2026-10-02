@@ -34,4 +34,11 @@ jobs:
       - run: bash tests/scripts/dev-test.sh
         env:
           CORVEES_SCRIPT_TEST_DATABASE_URL: postgresql://corvees:local-only@localhost:5432/corvees_test
+      - run: bash tests/scripts/deploy-test.sh
       - run: dotnet format Corvees.slnx --verify-no-changes --no-restore
+
+  production-stack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash tests/scripts/prod-test.sh

@@ -1,0 +1,125 @@
+name: Production
+
+on:
+  push:
+    branches: [production]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: corvees-production
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/production'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: corvees_test
+          POSTGRES_USER: corvees
+          POSTGRES_PASSWORD: local-only
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U corvees -d corvees_test"
+          --health-interval 2s --health-timeout 2s --health-retries 15
+    env:
+      CORVEES_TEST_DATABASE_URL: Host=localhost;Port=5432;Database=corvees_test;Username=corvees;Password=local-only
+      CORVEES_SCRIPT_TEST_DATABASE_URL: postgresql://corvees:local-only@localhost:5432/corvees_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet test Corvees.slnx --configuration Release
+      - run: bash tests/scripts/dev-test.sh
+      - run: bash tests/scripts/deploy-test.sh
+      - run: dotnet format Corvees.slnx --verify-no-changes --no-restore
+
+  images:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      app: ${{ steps.publish.outputs.app }}
+      migrate: ${{ steps.publish.outputs.migrate }}
+      tools: ${{ steps.publish.outputs.tools }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test the production stack
+        env:
+          CORVEES_TEST_RELEASE: ${{ github.sha }}
+        run: bash tests/scripts/prod-test.sh
+      - name: Publish tested images
+        id: publish
+        env:
+          REGISTRY_TOKEN: ${{ github.token }}
+          REGISTRY_USER: ${{ github.actor }}
+          REVISION: ${{ github.sha }}
+        run: |
+          printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io --username "$REGISTRY_USER" --password-stdin
+          for target in app migrate tools; do
+            image="ghcr.io/petits-chapeaux/corvees-$target:$REVISION"
+            docker tag "corvees-$target:$REVISION" "$image"
+            docker push "$image"
+            digest=$(docker image inspect "$image" --format '{{index .RepoDigests 0}}')
+            printf '%s=%s\n' "$target" "${digest##*@}" >> "$GITHUB_OUTPUT"
+          done
+
+  deploy:
+    needs: images
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    permissions:
+      contents: read
+      packages: read
+      id-token: write
+    steps:
+      - name: Check deployment configuration
+        env:
+          CLIENT_ID: ${{ vars.TS_CLIENT_ID }}
+          AUDIENCE: ${{ vars.TS_AUDIENCE }}
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+          KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          test -n "$CLIENT_ID" && test -n "$AUDIENCE" && test -n "$SSH_KEY"
+          test -n "$DEPLOY_HOST" && test -n "$DEPLOY_USER" && test -n "$KNOWN_HOSTS"
+      - uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd
+        with:
+          oauth-client-id: ${{ vars.TS_CLIENT_ID }}
+          audience: ${{ vars.TS_AUDIENCE }}
+          tags: tag:corvees-ci
+          ping: ${{ vars.DEPLOY_HOST }}
+      - name: Deploy immutable images over private SSH
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+          REGISTRY_TOKEN: ${{ github.token }}
+          REGISTRY_USER: ${{ github.actor }}
+          REVISION: ${{ github.sha }}
+          APP_DIGEST: ${{ needs.images.outputs.app }}
+          MIGRATE_DIGEST: ${{ needs.images.outputs.migrate }}
+          TOOLS_DIGEST: ${{ needs.images.outputs.tools }}
+        run: |
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/corvees_deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf '%s\n' "$REGISTRY_TOKEN" | ssh -T -i ~/.ssh/corvees_deploy \
+            -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 \
+            "$DEPLOY_USER@$DEPLOY_HOST" "deploy $REVISION $APP_DIGEST $MIGRATE_DIGEST $TOOLS_DIGEST $REGISTRY_USER"
+      - name: Verify public readiness
+        run: curl --fail --silent --show-error --retry 6 --retry-all-errors --retry-delay 5 --max-time 15 https://corvees.cacou.ca/readyz

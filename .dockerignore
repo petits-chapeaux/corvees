@@ -1,0 +1,13 @@
+.git
+.github
+**/._*
+**/.DS_Store
+.mcp.json
+.env*
+**/bin
+**/obj
+**/bin\\*
+tests
+docs
+backups
+.prod-*.lock
