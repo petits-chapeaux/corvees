@@ -6,7 +6,8 @@ public static class HostConfiguration
     {
         if (string.IsNullOrWhiteSpace(configuration.GetConnectionString("Corvees")))
             throw new InvalidOperationException("ConnectionStrings:Corvees must be set.");
-        if (string.IsNullOrWhiteSpace(configuration["AllowedHosts"]) || configuration["AllowedHosts"] == "*")
+        var allowedHosts = configuration["AllowedHosts"]?.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (allowedHosts is null || allowedHosts.Length == 0 || allowedHosts.Any(host => host.Contains('*')))
             throw new InvalidOperationException("AllowedHosts must list the expected host names.");
     }
 }

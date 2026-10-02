@@ -3,16 +3,16 @@ set -euo pipefail
 
 # Run only with operator database credentials; tokens are printed once and never stored in plaintext.
 command=${1:-}
-if [[ ! $command =~ ^(create-group|add-member|rotate-token|delete-member|restore-member)$ ]]; then
-  printf 'Usage: %s {create-group NAME FIRST_MEMBER|add-member GROUP_ID NAME|rotate-token MEMBER_ID|delete-member MEMBER_ID|restore-member MEMBER_ID}\n' "$0" >&2
+if [[ ! $command =~ ^(list-groups|list-members|create-group|add-member|rotate-token|delete-member|restore-member)$ ]]; then
+  printf 'Usage: %s {list-groups|list-members GROUP_ID|create-group NAME FIRST_MEMBER|add-member GROUP_ID NAME|rotate-token MEMBER_ID|delete-member MEMBER_ID|restore-member MEMBER_ID}\n' "$0" >&2
   exit 2
 fi
 
-if [[ $command == create-group || $command == add-member ]]; then
-  [[ $# == 3 ]] || { echo 'Expected two arguments' >&2; exit 2; }
-else
-  [[ $# == 2 ]] || { echo 'Expected one argument' >&2; exit 2; }
-fi
+case $command in
+  list-groups) [[ $# == 1 ]] || { echo 'Expected no arguments' >&2; exit 2; } ;;
+  create-group|add-member) [[ $# == 3 ]] || { echo 'Expected two arguments' >&2; exit 2; } ;;
+  *) [[ $# == 2 ]] || { echo 'Expected one argument' >&2; exit 2; } ;;
+esac
 
 if [[ $command == create-group || $command == add-member || $command == rotate-token || $command == restore-member ]]; then
   token=$(openssl rand -hex 32)
@@ -20,6 +20,16 @@ if [[ $command == create-group || $command == add-member || $command == rotate-t
 fi
 
 case $command in
+  list-groups)
+    psql -X --csv -v ON_ERROR_STOP=1 <<'SQL'
+SELECT id, name, created_at FROM groups ORDER BY name, id;
+SQL
+    ;;
+  list-members)
+    psql -X --csv -v ON_ERROR_STOP=1 -v group_id="$2" <<'SQL'
+SELECT id, display_name, deleted_at FROM members WHERE group_id = :'group_id'::uuid ORDER BY display_name, id;
+SQL
+    ;;
   create-group)
     id=$(psql -XAtq -v ON_ERROR_STOP=1 -v group_name="$2" -v member_name="$3" -v hash="$hash" <<'SQL'
 WITH new_group AS (INSERT INTO groups (id, name, version, created_at, updated_at)
