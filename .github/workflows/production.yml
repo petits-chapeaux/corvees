@@ -93,8 +93,12 @@ jobs:
           DEPLOY_USER: ${{ vars.DEPLOY_USER }}
           KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
         run: |
-          test -n "$CLIENT_ID" && test -n "$AUDIENCE" && test -n "$SSH_KEY"
-          test -n "$DEPLOY_HOST" && test -n "$DEPLOY_USER" && test -n "$KNOWN_HOSTS"
+          for name in CLIENT_ID AUDIENCE SSH_KEY DEPLOY_HOST DEPLOY_USER KNOWN_HOSTS; do
+            if [[ -z ${!name} ]]; then
+              echo "::error::Missing deployment configuration: $name. Complete the production setup first."
+              exit 1
+            fi
+          done
       - uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd
         with:
           oauth-client-id: ${{ vars.TS_CLIENT_ID }}
