@@ -21,7 +21,7 @@ ALTER TABLE $SCRIPT_TEST_SCHEMA.members ADD FOREIGN KEY (group_id) REFERENCES $S
 SQL
 
 mkdir -p "$tmp/scripts" "$tmp/bin"
-cp "$root/scripts/dev.sh" "$root/scripts/admin.sh" "$tmp/scripts/"
+cp "$root/scripts/dev.sh" "$root/scripts/seed.sh" "$root/scripts/admin.sh" "$tmp/scripts/"
 printf '#!/usr/bin/env bash\nexit 0\n' > "$tmp/bin/docker"
 cp "$tmp/bin/docker" "$tmp/bin/dotnet"
 cat > "$tmp/bin/psql" <<'SH'
@@ -39,6 +39,7 @@ query() { psql -XAtq -v ON_ERROR_STOP=1 -c "$1"; }
 first=$("$tmp/scripts/dev.sh")
 second=$("$tmp/scripts/dev.sh")
 [[ $first == "$second" ]] || fail 'Restart changed the local credentials or MCP URL'
+[[ $(cd "$tmp/bin" && "$tmp/scripts/seed.sh") == "$first" ]] || fail 'Standalone seeding differs from startup seeding'
 [[ $(query 'SELECT count(*) FROM groups') == 1 ]] || fail 'Restart created another group'
 [[ $(query 'SELECT count(*) FROM members') == 1 ]] || fail 'Restart created another member'
 token=${first##*http://localhost:5169/m/}
