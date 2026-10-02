@@ -66,7 +66,7 @@ Prérequis : SDK .NET 10, OpenSSL, `psql` et Docker Compose (ou Podman avec une 
 ./scripts/dev.sh
 ```
 
-Le script démarre Postgres, restaure l'outil EF, applique les migrations et crée un groupe et un premier membre de développement; il affiche leur jeton **une seule fois** et l'URL MCP. Chaque exécution crée un nouveau groupe local. Le serveur écoute sur `http://localhost:5169`. Vérifier `/healthz`, `/readyz` et la racine publique `/api/v1`. Les autres routes REST demandent `Authorization: Bearer <jeton>`.
+Le script démarre Postgres, restaure l'outil EF, applique les migrations et crée le groupe et le membre de développement s'ils n'existent pas. Il affiche le même jeton et la même URL MCP à chaque exécution, même après un `docker compose down -v`. Les redémarrages conservent les identifiants et les données existantes. Ce jeton est public, déterministe et réservé à la base locale sur loopback; ne jamais l'utiliser dans un autre environnement. Le provisionnement de production conserve ses jetons aléatoires. Le serveur écoute sur `http://localhost:5169`. Vérifier `/healthz`, `/readyz` et la racine publique `/api/v1`. Les autres routes REST demandent `Authorization: Bearer <jeton>`.
 
 ```sh
 export MEMBER_TOKEN='<jeton affiché par le script>'
@@ -85,7 +85,10 @@ La [note de maintenabilité .NET](docs/research/dotnet-maintainability.md) décr
 ```sh
 dotnet test Corvees.slnx --configuration Release
 dotnet format Corvees.slnx --verify-no-changes --no-restore
+CORVEES_SCRIPT_TEST_DATABASE_URL='postgresql://corvees:local-only@127.0.0.1:54329/corvees' bash tests/scripts/dev-test.sh
 ```
+
+Le test du script de démarrage utilise une base migrée, isole ses données dans un schéma temporaire et vérifie la stabilité du jeton, la conservation des données et les jetons aléatoires de production.
 
 Définir `CORVEES_TEST_DATABASE_URL` vers une base PostgreSQL de test dédiée pour exécuter aussi les tests REST/MCP et de concurrence. Sans cette variable, ces tests sont explicitement ignorés. Les fixtures appliquent les migrations et nettoient les groupes qu'elles créent. La CI exécute la suite complète avec PostgreSQL et vérifie le formatage; les avertissements de compilation sont des erreurs. `dotnet format Corvees.slnx` corrige le formatage localement.
 

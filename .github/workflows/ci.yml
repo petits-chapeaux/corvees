@@ -31,4 +31,7 @@ jobs:
         with:
           dotnet-version: 10.0.x
       - run: dotnet test Corvees.slnx --configuration Release
+      - run: bash tests/scripts/dev-test.sh
+        env:
+          CORVEES_SCRIPT_TEST_DATABASE_URL: postgresql://corvees:local-only@localhost:5432/corvees_test
       - run: dotnet format Corvees.slnx --verify-no-changes --no-restore
